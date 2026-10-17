@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VaniFlow — Live Real-Time AI Voice Changer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0d14;
+      --bg-secondary: #121622;
+      --bg-card: rgba(22, 28, 44, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --accent-coral: #ff5e62;
+      --accent-orange: #ff9966;
+      --accent-gradient: linear-gradient(135deg, #ff5e62, #ff9966);
+      --accent-teal: #00d2ff;
+      --accent-teal-gradient: linear-gradient(135deg, #00d2ff, #3a7bd5);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --glow: 0 0 25px rgba(255, 94, 98, 0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(255, 94, 98, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(0, 210, 255, 0.07) 0%, transparent 40%);
+    }
+
+    header {
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(10, 13, 20, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--glow);
+    }
+
+    .logo-badge svg { width: 22px; height: 22px; fill: white; }
+
+    .logo-text h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-text p {
+      font-size: 0.75rem;
+      color: var(--accent-orange);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+    .status-dot.active {
+      background: var(--success);
+      box-shadow: 0 0 12px var(--success);
+      animation: pulse 2s infinite;
+    }
+    .status-dot.error { background: var(--danger); }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    main {
+      flex: 1;
+      max-width: 1300px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 1.75rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      backdrop-filter: blur(16px);
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+
+    .card-title svg { width: 18px; height: 18px; color: var(--accent-orange); }
+
+    /* Controls Grid */
+    .btn-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: none;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: var(--accent-gradient);
+      color: white;
+      box-shadow: 0 4px 20px rgba(255, 94, 98, 0.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 26px rgba(255, 94, 98, 0.5);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-stop {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .btn-stop:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--danger);
+    }
+    .btn-stop:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Mode Selector Tabs */
+    .mode-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 6px;
+      border-radius: var(--radius-md);
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .mode-tab {
+      padding: 10px 14px;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 700;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+    }
+
+    .mode-tab.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .mode-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 6px;
+      margin-left: 6px;
+      font-weight: 800;
+      vertical-align: middle;
+    }
+    .badge-dsp { background: rgba(0, 210, 255, 0.2); color: var(--accent-teal); }
+    .badge-ai { background: rgba(255, 94, 98, 0.2); color: var(--accent-coral); }
+
+    /* Form Fields */
+    .field-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .field-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .field-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-orange);
+      font-weight: 700;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      background: rgba(10, 13, 20, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: white;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    select:focus, input[type="text"]:focus {
+      border-color: var(--accent-coral);
+    }
+
+    /* Slider Styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      margin: 10px 0;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-coral);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 94, 98, 0.6);
+      transition: transform 0.1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* VU Meters */
+    .vu-container {
+      margin-bottom: 1.25rem;
+    }
+    .vu-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+    .vu-bar-bg {
+      height: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+    }
+    .vu-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10b981 0%, #f59e0b 70%, #ef4444 95%);
+      transition: width 0.08s ease-out;
+      border-radius: 5px;
+    }
+
+    /* Telemetry Sidebar */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+    }
+    .stat-box {
+      background: rgba(10, 13, 20, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+    .stat-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .stat-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .stat-unit {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-left: 2px;
+    }
+
+    /* Alert Banner */
+    .banner {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .banner.error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      display: block;
+    }
+    .banner.info {
+      background: rgba(0, 210, 255, 0.12);
+      border: 1px solid rgba(0, 210, 255, 0.25);
+      color: #7dd3fc;
+      display: block;
+    }
+
+    .vb-guide {
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+    .vb-guide strong { color: #f1f5f9; }
+    .vb-guide ol { padding-left: 1.2rem; margin-top: 8px; }
+    .vb-guide li { margin-bottom: 6px; }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="logo-group">
+      <div class="logo-badge">
+        <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zm5.3 7a.7.7 0 0 0-.7.7 4.6 4.6 0 0 1-9.2 0 .7.7 0 0 0-1.4 0 6 6 0 0 0 5.3 5.95V19H9a.7.7 0 0 0 0 1.4h6a.7.7 0 0 0 0-1.4h-2.3v-3.35A6 6 0 0 0 18 9.7a.7.7 0 0 0-.7-.7z"/></svg>
+      </div>
+      <div class="logo-text">
+        <h1>VaniFlow</h1>
+        <p>Live Indian Voice Conversion</p>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <div class="status-pill">
+        <div id="statusDot" class="status-dot"></div>
+        <span id="statusText">Ready</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Body Content -->
+  <main>
+    <!-- Left Column: Controls & Configuration -->
+    <section>
+      <!-- Error / Notification Banner -->
+      <div id="alertBanner" class="banner"></div>
+
+      <!-- Start/Stop / Test Action Buttons -->
+      <div class="btn-bar">
+        <button id="btnStart" class="btn btn-primary" onclick="startAudio()">
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          Start Voice Conversion
+        </button>
+        <button id="btnStop" class="btn btn-stop" onclick="stopAudio()" disabled>
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+          Stop
+        </button>
+        <button id="btnTest" class="btn" style="background: rgba(0, 210, 255, 0.15); color: #7dd3fc; border: 1px solid rgba(0, 210, 255, 0.3);" onclick="playTestSample()">
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          Test Female Voice
+        </button>
+      </div>
+
+      <!-- Mode Selector -->
+      <div class="mode-selector">
+        <div id="tabDsp" class="mode-tab active" onclick="setMode('dsp')">
+          DSP Mode (Real-Time)
+          <span class="mode-badge badge-dsp">Low Latency</span>
+        </div>
+        <div id="tabRvc" class="mode-tab" onclick="setMode('rvc')">
+          RVC AI Mode (Neural)
+          <span class="mode-badge badge-ai">Quality</span>
+        </div>
+      </div>
+
+      <!-- Hardware Audio Devices -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            Audio Hardware Devices
+          </div>
+          <button class="status-pill" style="cursor:pointer;" onclick="loadDevices()">↻ Refresh</button>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Microphone Input</div>
+          <select id="inputDevice" onchange="applySettings()"></select>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Headphones / Virtual Mic Output</div>
+          <select id="outputDevice" onchange="applySettings()"></select>
+        </div>
+      </div>
+
+      <!-- Voice Pitch & Timbre Controls -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77zm-2.5 4.77l-4 4H3v4h4.5l4 4v-12z"/></svg>
+            Indian Female Voice Tuning
+          </div>
+          <span id="activeModelBadge" class="mode-badge badge-dsp">WORLD Vocoder</span>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">
+            <span>Voice Model / Preset</span>
+          </div>
+          <select id="modelSelect" onchange="onModelChange()"></select>
+        </div>
+
+        <!-- Pitch Shift -->
+        <div class="field-group">
+          <div class="field-label">
+            <span>Fundamental Pitch Multiplier</span>
+            <span id="pitchVal" class="field-value">1.60x</span>
+          </div>
+          <input type="range" id="pitchSlider" min="1.0" max="2.2" step="0.02" value="1.60" oninput="onPitchSlider(this.value)">
+          <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; justify-content:space-between;">
+            <span>1.0x (Natural)</span>
+            <span>1.60x (Indian Female Range)</span>
+            <span>2.2x (High)</span>
+          </div>
+        </div>
+
+        <!-- Formant Warp -->
+        <div class="field-group">
+          <div class="field-label">
+            <span>Vocal Tract Formant Warp</span>
+            <span id="formantVal" class="field-value">1.15x</span>
+          </div>
+          <input type="range" id="formantSlider" min="0.95" max="1.35" step="0.01" value="1.15" oninput="onFormantSlider(this.value)">
+          <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; justify-content:space-between;">
+            <span>1.0x (Original)</span>
+            <span>1.15x (Feminine Tract)</span>
+            <span>1.35x (Bright)</span>
+          </div>
+        </div>
+
+        <!-- Output Gain -->
+        <div class="field-group">
+          <div class="field-label">
+            <span>Output Level Gain</span>
+            <span id="gainVal" class="field-value">85%</span>
+          </div>
+          <input type="range" id="gainSlider" min="0.1" max="1.5" step="0.05" value="0.85" oninput="onGainSlider(this.value)">
+        </div>
+
+        <!-- Dry / Wet Mix -->
+        <div class="field-group">
+          <div class="field-label">
+            <span>Dry / Wet Balance</span>
+            <span id="mixVal" class="field-value">100% Wet</span>
+          </div>
+          <input type="range" id="mixSlider" min="0.0" max="1.0" step="0.05" value="1.0" oninput="onMixSlider(this.value)">
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Live Telemetry & Virtual Mic Guide -->
+    <aside>
+      <!-- VU Meters -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Live Audio Meters</div>
+        </div>
+
+        <div class="vu-container">
+          <div class="vu-label">
+            <span>Microphone Input (RMS)</span>
+            <span id="inRmsVal">0.000</span>
+          </div>
+          <div class="vu-bar-bg">
+            <div id="inVuBar" class="vu-bar-fill"></div>
+          </div>
+        </div>
+
+        <div class="vu-container">
+          <div class="vu-label">
+            <span>Converted Output (RMS)</span>
+            <span id="outRmsVal">0.000</span>
+          </div>
+          <div class="vu-bar-bg">
+            <div id="outVuBar" class="vu-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Latency Telemetry -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Measured Performance</div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-title">Inference Time</div>
+            <div><span id="statProc" class="stat-num">0</span><span class="stat-unit">ms</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-title">Total Delay</div>
+            <div><span id="statLat" class="stat-num">0</span><span class="stat-unit">ms</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-title">Real-Time Factor</div>
+            <div><span id="statRtf" class="stat-num">0.0</span><span class="stat-unit">x</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-title">Processed</div>
+            <div><span id="statChunks" class="stat-num">0</span><span class="stat-unit">chunks</span></div>
+          </div>
+        </div>
+
+        <div style="font-size:0.75rem; color:var(--text-muted); line-height: 1.4;">
+          Buffer Underflows: <strong id="statUnder" style="color:#fff;">0</strong> | Overflows: <strong id="statOver" style="color:#fff;">0</strong>
+        </div>
+      </div>
+
+      <!-- Virtual Mic (VB-CABLE) Guide -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Virtual Mic Routing</div>
+        </div>
+        <div class="vb-guide">
+          To speak in Discord, Zoom, or Google Meet with this voice:
+          <ol>
+            <li>Install <strong>VB-CABLE Virtual Audio Device</strong>.</li>
+            <li>In VaniFlow, select <strong>CABLE Input</strong> as the Output Device.</li>
+            <li>In Discord/Zoom/Meet, select <strong>CABLE Output</strong> as your Microphone.</li>
+            <li>Your converted voice streams live into the call!</li>
+          </ol>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    VaniFlow Local AI Voice Conversion • Windows 10 CPU-Optimized • Python 3.12
+  </footer>
+
+  <script>
+    let activeMode = 'dsp';
+    let pollInterval = null;
+
+    async function playTestSample() {
+      try {
+        showBanner("🔊 Playing converted female voice test through your headphones/speakers...", "info");
+        const res = await fetch('/audio/test-sample', {method: 'POST'});
+        const data = await res.json();
+        setTimeout(() => {
+          const b = document.getElementById('alertBanner');
+          if (b.className.includes('info')) showBanner("", "none");
+        }, 3500);
+      } catch (e) {
+        showBanner("Test sample error: " + e.message, "error");
+      }
+    }
+
+    async function loadDevices() {
+      try {
+        const res = await fetch('/audio/devices');
+        const data = await res.json();
+        
+        const inSel = document.getElementById('inputDevice');
+        const outSel = document.getElementById('outputDevice');
+        
+        inSel.innerHTML = '<option value="">System Default Input</option>';
+        data.input_devices.forEach(d => {
+          let label = d.name;
+          if (d.name.includes("Stereo Mix")) {
+            label += " ⚠️ (PC Audio Loopback — Not Mic)";
+          } else if (d.name.includes("Input ()")) {
+            label += " ❌ (3.5mm Jack — Disconnected)";
+          }
+          inSel.innerHTML += `<option value="${d.index}">${label} [${d.hostapi_name}]</option>`;
+        });
+
+        outSel.innerHTML = '<option value="">System Default Output</option>';
+        data.output_devices.forEach(d => {
+          outSel.innerHTML += `<option value="${d.index}">${d.name} (${d.hostapi_name})</option>`;
+        });
+
+        await loadSettings();
+      } catch (e) {
+        showBanner('Failed to load audio devices: ' + e.message, 'error');
+      }
+    }
+
+    async function loadModels() {
+      try {
+        const res = await fetch('/voice/models');
+        const data = await res.json();
+        const sel = document.getElementById('modelSelect');
+        sel.innerHTML = '';
+        data.models.forEach(m => {
+          sel.innerHTML += `<option value="${m.id}" data-type="${m.model_type}" data-path="${m.path || ''}">${m.name}</option>`;
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/settings');
+        const cfg = await res.json();
+
+        activeMode = cfg.mode;
+        updateModeTabs();
+
+        if (cfg.audio.input_device !== null) {
+          document.getElementById('inputDevice').value = cfg.audio.input_device;
+        }
+        if (cfg.audio.output_device !== null) {
+          document.getElementById('outputDevice').value = cfg.audio.output_device;
+        }
+
+        document.getElementById('pitchSlider').value = cfg.dsp.pitch_factor;
+        document.getElementById('pitchVal').innerText = cfg.dsp.pitch_factor.toFixed(2) + 'x';
+
+        document.getElementById('formantSlider').value = cfg.dsp.formant_shift;
+        document.getElementById('formantVal').innerText = cfg.dsp.formant_shift.toFixed(2) + 'x';
+
+        document.getElementById('gainSlider').value = cfg.dsp.output_gain;
+        document.getElementById('gainVal').innerText = Math.round(cfg.dsp.output_gain * 100) + '%';
+
+        document.getElementById('mixSlider').value = cfg.dsp.dry_wet_mix;
+        document.getElementById('mixVal').innerText = Math.round(cfg.dsp.dry_wet_mix * 100) + '% Wet';
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function updateModeTabs() {
+      document.getElementById('tabDsp').classList.toggle('active', activeMode === 'dsp');
+      document.getElementById('tabRvc').classList.toggle('active', activeMode === 'rvc');
+      document.getElementById('activeModelBadge').innerText = activeMode === 'dsp' ? 'WORLD Vocoder' : 'RVC Neural AI';
+    }
+
+    async function setMode(mode) {
+      activeMode = mode;
+      updateModeTabs();
+      await applySettings();
+    }
+
+    function onPitchSlider(v) {
+      document.getElementById('pitchVal').innerText = parseFloat(v).toFixed(2) + 'x';
+      debounceApplySettings();
+    }
+
+    function onFormantSlider(v) {
+      document.getElementById('formantVal').innerText = parseFloat(v).toFixed(2) + 'x';
+      debounceApplySettings();
+    }
+
+    function onGainSlider(v) {
+      document.getElementById('gainVal').innerText = Math.round(parseFloat(v) * 100) + '%';
+      debounceApplySettings();
+    }
+
+    function onMixSlider(v) {
+      document.getElementById('mixVal').innerText = Math.round(parseFloat(v) * 100) + '% Wet';
+      debounceApplySettings();
+    }
+
+    function onModelChange() {
+      const sel = document.getElementById('modelSelect');
+      const opt = sel.options[sel.selectedIndex];
+      const modelType = opt.getAttribute('data-type');
+      if (modelType === 'dsp_preset') {
+        if (opt.value === 'dsp_indian_female') {
+          document.getElementById('pitchSlider').value = 1.60;
+          document.getElementById('formantSlider').value = 1.15;
+        } else if (opt.value === 'dsp_young_female') {
+          document.getElementById('pitchSlider').value = 1.75;
+          document.getElementById('formantSlider').value = 1.20;
+        } else if (opt.value === 'dsp_warm_female') {
+          document.getElementById('pitchSlider').value = 1.45;
+          document.getElementById('formantSlider').value = 1.10;
+        }
+        document.getElementById('pitchVal').innerText = parseFloat(document.getElementById('pitchSlider').value).toFixed(2) + 'x';
+        document.getElementById('formantVal').innerText = parseFloat(document.getElementById('formantSlider').value).toFixed(2) + 'x';
+      }
+      applySettings();
+    }
+
+    let debounceTimer = null;
+    function debounceApplySettings() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(applySettings, 200);
+    }
+
+    async function applySettings() {
+      const inVal = document.getElementById('inputDevice').value;
+      const outVal = document.getElementById('outputDevice').value;
+
+      const body = {
+        mode: activeMode,
+        input_device: inVal === "" ? null : parseInt(inVal),
+        output_device: outVal === "" ? null : parseInt(outVal),
+        dsp_pitch_factor: parseFloat(document.getElementById('pitchSlider').value),
+        dsp_formant_shift: parseFloat(document.getElementById('formantSlider').value),
+        dsp_output_gain: parseFloat(document.getElementById('gainSlider').value),
+        dsp_dry_wet_mix: parseFloat(document.getElementById('mixSlider').value),
+      };
+
+      try {
+        const res = await fetch('/settings', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          showBanner(err.detail || 'Settings error', 'error');
+        }
+      } catch (e) {
+        showBanner('Failed to update settings: ' + e.message, 'error');
+      }
+    }
+
+    async function startAudio() {
+      try {
+        await applySettings();
+        const res = await fetch('/audio/start', {method: 'POST'});
+        const data = await res.json();
+        if (!res.ok) {
+          showBanner(data.detail || 'Failed to start audio', 'error');
+        } else {
+          showBanner('', 'none');
+          updateRunningUI(true);
+        }
+      } catch (e) {
+        showBanner('Start error: ' + e.message, 'error');
+      }
+    }
+
+    async function stopAudio() {
+      try {
+        await fetch('/audio/stop', {method: 'POST'});
+        updateRunningUI(false);
+      } catch (e) {
+        showBanner('Stop error: ' + e.message, 'error');
+      }
+    }
+
+    function updateRunningUI(isRunning) {
+      document.getElementById('btnStart').disabled = isRunning;
+      document.getElementById('btnStop').disabled = !isRunning;
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      if (isRunning) {
+        dot.className = 'status-dot active';
+        text.innerText = 'Converting Live (' + activeMode.toUpperCase() + ')';
+      } else {
+        dot.className = 'status-dot';
+        text.innerText = 'Ready';
+        document.getElementById('inVuBar').style.width = '0%';
+        document.getElementById('outVuBar').style.width = '0%';
+      }
+    }
+
+    async function pollTelemetry() {
+      try {
+        const res = await fetch('/audio/status');
+        const data = await res.json();
+
+        updateRunningUI(data.is_running);
+
+        if (data.last_error) {
+          showBanner(data.last_error, 'error');
+        }
+
+        // Update stats
+        document.getElementById('statProc').innerText = data.processing_time_ms;
+        document.getElementById('statLat').innerText = data.total_latency_ms;
+        document.getElementById('statRtf').innerText = data.real_time_factor.toFixed(2);
+        document.getElementById('statChunks').innerText = data.chunks_processed;
+        document.getElementById('statUnder').innerText = data.underrun_count;
+        document.getElementById('statOver').innerText = data.overflow_count;
+
+        // Color code RTF
+        const rtfEl = document.getElementById('statRtf');
+        if (data.real_time_factor > 1.0) {
+          rtfEl.style.color = 'var(--danger)';
+        } else {
+          rtfEl.style.color = '#10b981';
+        }
+
+        // VU meters
+        const inPct = Math.min(100, Math.round(data.input_rms * 400));
+        const outPct = Math.min(100, Math.round(data.output_rms * 400));
+        document.getElementById('inVuBar').style.width = inPct + '%';
+        document.getElementById('outVuBar').style.width = outPct + '%';
+        document.getElementById('inRmsVal').innerText = data.input_rms.toFixed(3);
+        document.getElementById('outRmsVal').innerText = data.output_rms.toFixed(3);
+
+        // Alert user if microphone is silent (RMS = 0)
+        if (data.is_running && data.chunks_processed > 6 && data.input_rms < 0.0002) {
+          showBanner("⚠️ Microphone sending silence (RMS: 0.000)! Windows is routing 'Stereo Mix' or your mic is disabled. See the fix steps below or click 'Test Female Voice' to hear converted voice in headphones.", "error");
+        } else if (!data.last_error && data.is_running && data.input_rms >= 0.0005) {
+          const b = document.getElementById('alertBanner');
+          if (b.className.includes('error')) showBanner("", "none");
+        }
+      } catch (e) {
+        // disconnected or stopped
+      }
+    }
+
+    function showBanner(msg, type) {
+      const b = document.getElementById('alertBanner');
+      if (!msg || type === 'none') {
+        b.style.display = 'none';
+        return;
+      }
+      b.className = 'banner ' + type;
+      b.innerText = msg;
+      b.style.display = 'block';
+    }
+
+    window.onload = async () => {
+      await loadModels();
+      await loadDevices();
+      pollInterval = setInterval(pollTelemetry, 300);
+    };
+  </script>
+</body>
+</html>
