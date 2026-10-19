@@ -129,6 +129,10 @@
       50% { transform: scale(1.3); opacity: 0.7; }
       100% { transform: scale(1); opacity: 1; }
     }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
 
     main {
       flex: 1;
@@ -222,7 +226,7 @@
     /* Mode Selector Tabs */
     .mode-selector {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
       background: rgba(0, 0, 0, 0.25);
       padding: 6px;
@@ -261,6 +265,10 @@
     }
     .badge-dsp { background: rgba(0, 210, 255, 0.2); color: var(--accent-teal); }
     .badge-ai { background: rgba(255, 94, 98, 0.2); color: var(--accent-coral); }
+    .badge-clone { background: rgba(168, 85, 247, 0.25); color: #c084fc; }
+    .badge-ready { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    .badge-warn { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+    .badge-error { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
 
     /* Form Fields */
     .field-group {
@@ -412,6 +420,54 @@
     .vb-guide ol { padding-left: 1.2rem; margin-top: 8px; }
     .vb-guide li { margin-bottom: 6px; }
 
+    /* TTS Voice Cloning Card Styling */
+    .tts-chip-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .tts-chip {
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: #e9d5ff;
+      border-radius: 20px;
+      padding: 6px 13px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .tts-chip:hover {
+      background: rgba(168, 85, 247, 0.28);
+      border-color: #c084fc;
+      transform: translateY(-1px);
+    }
+    .tts-textarea {
+      width: 100%;
+      min-height: 85px;
+      padding: 12px 14px;
+      background: rgba(10, 13, 20, 0.75);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: white;
+      font-family: inherit;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .tts-textarea:focus {
+      border-color: #c084fc;
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+    }
+    .tts-audio-player {
+      width: 100%;
+      margin-top: 8px;
+      border-radius: 8px;
+    }
+
     footer {
       text-align: center;
       padding: 1.5rem;
@@ -475,6 +531,182 @@
         <div id="tabRvc" class="mode-tab" onclick="setMode('rvc')">
           RVC AI Mode (Neural)
           <span class="mode-badge badge-ai">Quality</span>
+        </div>
+        <div id="tabClone" class="mode-tab" onclick="setMode('voice_cloning')">
+          Voice Cloning
+          <span class="mode-badge badge-clone">Reference Voice Match</span>
+        </div>
+      </div>
+
+      <!-- Voice Cloning Reference & Settings Panel -->
+      <div id="voiceCloneCard" class="card" style="display: none; border-color: rgba(168, 85, 247, 0.35);">
+        <div class="card-header">
+          <div class="card-title">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+            Voice Reference Profile
+          </div>
+          <span id="cloneStatusBadge" class="mode-badge badge-warn">Checking...</span>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.25); border-radius: 8px; padding: 12px; margin-bottom: 1rem; font-size: 0.85rem; border: 1px solid var(--border-color);">
+          <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+            <span style="color:var(--text-muted);">Folder:</span>
+            <span id="cloneRefFolder" style="font-family:'JetBrains Mono',monospace; color:#c084fc;">voice-clone/</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+            <span style="color:var(--text-muted);">Clips Found:</span>
+            <span id="cloneClipsCount">3 audio messages (WhatsApp Opus/Ogg)</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+            <span style="color:var(--text-muted);">Target Median Pitch:</span>
+            <span id="cloneTargetF0" style="color:var(--accent-orange); font-weight:700;">207 Hz (Indian Female)</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--text-muted);">Total Reference Audio:</span>
+            <span id="cloneDuration">34.6s clean speech</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 1.25rem;">
+          <button id="btnPrepareRef" class="btn" style="flex:1; background: rgba(168, 85, 247, 0.2); color:#c084fc; border: 1px solid rgba(168, 85, 247, 0.4);" onclick="prepareVoiceReference()">
+            ⚡ Prepare Voice Reference
+          </button>
+          <button class="btn" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid var(--border-color);" onclick="loadVoiceCloningStatus()">
+            ↻ Check Status
+          </button>
+        </div>
+
+        <!-- Target Pitch Scale Slider -->
+        <div class="field-group">
+          <div class="field-label">
+            <span>Target Pitch Fine-Tuning</span>
+            <span id="clonePitchVal" class="field-value">1.00x</span>
+          </div>
+          <input type="range" id="clonePitchSlider" min="0.85" max="1.25" step="0.01" value="1.00" oninput="onClonePitchSlider(this.value)">
+          <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; justify-content:space-between;">
+            <span>0.85x (Deeper)</span>
+            <span>1.00x (Exact Target Match)</span>
+            <span>1.25x (Higher)</span>
+          </div>
+        </div>
+
+        <!-- Timbre Intensity Slider -->
+        <div class="field-group">
+          <div class="field-label">
+            <span>Target Timbre Conditioning Strength</span>
+            <span id="cloneTimbreVal" class="field-value">100%</span>
+          </div>
+          <input type="range" id="cloneTimbreSlider" min="0.5" max="1.0" step="0.05" value="1.0" oninput="onCloneTimbreSlider(this.value)">
+        </div>
+
+        <div style="background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 4px; font-size: 0.75rem; color: #fbbf24;">
+          ℹ️ Real-time voice conversion speed depends on CPU hardware. Live inference runs on your local CPU.
+        </div>
+      </div>
+
+      <!-- Text to Cloned Voice (TTS) Card -->
+      <div id="ttsCloneCard" class="card" style="display: none; border-color: rgba(168, 85, 247, 0.4); background: linear-gradient(180deg, rgba(22, 28, 44, 0.85) 0%, rgba(35, 20, 55, 0.7) 100%);">
+        <div class="card-header">
+          <div class="card-title">
+            <svg fill="currentColor" viewBox="0 0 24 24" style="color: #c084fc;"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+            Text to Cloned Voice (TTS)
+          </div>
+          <span class="mode-badge badge-clone">AI Voice Synthesis</span>
+        </div>
+
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45;">
+          Type anything in Hindi, Hinglish, or English. It will be synthesized into speech and transformed with the cloned female voice profile!
+        </p>
+
+        <!-- Quick Phrases -->
+        <div class="field-label">
+          <span>Quick Phrases (Click to use)</span>
+        </div>
+        <div class="tts-chip-container">
+          <div class="tts-chip" onclick="setTtsText('नमस्ते, आप कैसे हैं? सब ठीक?')">👋 नमस्ते, आप कैसे हैं?</div>
+          <div class="tts-chip" onclick="setTtsText('Hello! I am speaking with your cloned AI voice.')">✨ Hello AI Voice</div>
+          <div class="tts-chip" onclick="setTtsText('Main theek hoon, aap batao kya chal raha hai?')">💬 Main theek hoon</div>
+          <div class="tts-chip" onclick="setTtsText('Haanji boliye, main sun rahi hoon.')">🎙️ Haanji boliye</div>
+          <div class="tts-chip" onclick="setTtsText('Kya aapko meri aawaz bilkul natural lag rahi hai?')">🎯 Natural aawaz?</div>
+        </div>
+
+        <!-- Text Input -->
+        <div class="field-group">
+          <div class="field-label">
+            <span>Text to Speak</span>
+            <span id="ttsCharCount" class="field-value">0 chars</span>
+          </div>
+          <textarea id="ttsTextInput" class="tts-textarea" placeholder="Type here in Hindi, Hinglish, or English... Example: नमस्ते! क्या हाल चाल है?" oninput="updateTtsCharCount()"></textarea>
+        </div>
+
+        <!-- Voice & Playback Controls -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem;">
+          <div>
+            <div class="field-label">Base Neural Accent</div>
+            <select id="ttsVoiceSelect">
+              <option value="hi-IN-SwaraNeural" selected>Hindi (Female - Swara) [Natural]</option>
+              <option value="en-IN-NeerjaNeural">Indian English (Female - Neerja) [Natural]</option>
+              <option value="hi-IN-MadhurNeural">Hindi (Male - Madhur)</option>
+              <option value="en-IN-PrabhatNeural">Indian English (Male - Prabhat)</option>
+            </select>
+          </div>
+          <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #f1f5f9; cursor: pointer; padding-bottom: 10px;">
+              <input type="checkbox" id="ttsPlayAudioCheck" checked style="accent-color: #a855f7; width: 16px; height: 16px;">
+              Play to Output (VB-CABLE/Headphones)
+            </label>
+          </div>
+        </div>
+
+        <!-- Cloned Voice Realism & Tone Calibration -->
+        <div style="background: rgba(0,0,0,0.25); border-radius: 8px; padding: 12px; margin-bottom: 1rem; border: 1px solid var(--border-color);">
+          <div class="field-group" style="margin-bottom: 8px;">
+            <div class="field-label">
+              <span>Voice Pitch Fine-Tuning (Tone)</span>
+              <span id="ttsPitchVal" class="field-value">Exact Match (207 Hz)</span>
+            </div>
+            <input type="range" id="ttsPitchSlider" min="-30" max="30" step="5" value="0" oninput="onTtsPitchSlider(this.value)">
+            <div style="font-size: 0.72rem; color: var(--text-muted); display:flex; justify-content:space-between;">
+              <span>-30 Hz (Deeper / Warm)</span>
+              <span>0 Hz (Exact Reference Match)</span>
+              <span>+30 Hz (Higher / Youthful)</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <div class="field-label">Speaking Pacing / Cadence</div>
+              <select id="ttsRateSelect">
+                <option value="-3" selected>Conversational (-3% [Natural])</option>
+                <option value="0">Normal (0%)</option>
+                <option value="-8">Relaxed & Calm (-8%)</option>
+                <option value="6">Brisk & Active (+6%)</option>
+              </select>
+            </div>
+            <div style="display:flex; align-items:center; font-size: 0.76rem; color: #10b981; line-height: 1.4;">
+              ✨ Ultra-realistic neural speech calibrated directly to the target reference without robotic vocoder distortion.
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
+          <button id="btnTtsSpeak" class="btn" style="flex: 2; background: linear-gradient(135deg, #a855f7, #ec4899); color: white; box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);" onclick="speakClonedText()">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            ⚡ Speak in Cloned Voice
+          </button>
+          <a id="btnTtsDownload" href="/voice-cloning/tts/audio" download="cloned_voice.wav" class="btn" style="flex: 1; background: rgba(255, 255, 255, 0.06); color: var(--text-muted); border: 1px solid var(--border-color); text-decoration: none; display: none;">
+            💾 Download WAV
+          </a>
+        </div>
+
+        <!-- Result Preview -->
+        <div id="ttsResultContainer" style="display: none; background: rgba(0, 0, 0, 0.35); border-radius: 8px; padding: 12px; border: 1px solid rgba(168, 85, 247, 0.3);">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 6px;">
+            <span style="color: #c084fc; font-weight: 600;">Audio Preview:</span>
+            <span id="ttsDurationInfo" style="color: var(--text-muted); font-family: 'JetBrains Mono', monospace;"></span>
+          </div>
+          <audio id="ttsAudioPlayer" controls class="tts-audio-player"></audio>
         </div>
       </div>
 
@@ -619,7 +851,7 @@
         </div>
 
         <div style="font-size:0.75rem; color:var(--text-muted); line-height: 1.4;">
-          Buffer Underflows: <strong id="statUnder" style="color:#fff;">0</strong> | Overflows: <strong id="statOver" style="color:#fff;">0</strong>
+          Buffer Underflows: <strong id="statUnder" style="color:#fff;">0</strong> | Overflows: <strong id="statOver" style="color:#fff;">0</strong> | CPU Load: <strong id="statOverload" style="color:#10b981;">Normal</strong>
         </div>
       </div>
 
@@ -733,6 +965,16 @@
 
         document.getElementById('mixSlider').value = cfg.dsp.dry_wet_mix;
         document.getElementById('mixVal').innerText = Math.round(cfg.dsp.dry_wet_mix * 100) + '% Wet';
+        if (cfg.voice_cloning) {
+          if (cfg.voice_cloning.target_pitch_scale) {
+            document.getElementById('clonePitchSlider').value = cfg.voice_cloning.target_pitch_scale;
+            document.getElementById('clonePitchVal').innerText = cfg.voice_cloning.target_pitch_scale.toFixed(2) + 'x';
+          }
+          if (cfg.voice_cloning.timbre_mix) {
+            document.getElementById('cloneTimbreSlider').value = cfg.voice_cloning.timbre_mix;
+            document.getElementById('cloneTimbreVal').innerText = Math.round(cfg.voice_cloning.timbre_mix * 100) + '%';
+          }
+        }
       } catch (e) {
         console.error(e);
       }
@@ -741,13 +983,178 @@
     function updateModeTabs() {
       document.getElementById('tabDsp').classList.toggle('active', activeMode === 'dsp');
       document.getElementById('tabRvc').classList.toggle('active', activeMode === 'rvc');
-      document.getElementById('activeModelBadge').innerText = activeMode === 'dsp' ? 'WORLD Vocoder' : 'RVC Neural AI';
+      document.getElementById('tabClone').classList.toggle('active', activeMode === 'voice_cloning');
+
+      const cloneCard = document.getElementById('voiceCloneCard');
+      const ttsCard = document.getElementById('ttsCloneCard');
+      const badge = document.getElementById('activeModelBadge');
+
+      if (activeMode === 'dsp') {
+        badge.className = 'mode-badge badge-dsp';
+        badge.innerText = 'WORLD Vocoder';
+        cloneCard.style.display = 'none';
+        if (ttsCard) ttsCard.style.display = 'none';
+      } else if (activeMode === 'rvc') {
+        badge.className = 'mode-badge badge-ai';
+        badge.innerText = 'RVC Neural AI';
+        cloneCard.style.display = 'none';
+        if (ttsCard) ttsCard.style.display = 'none';
+      } else if (activeMode === 'voice_cloning') {
+        badge.className = 'mode-badge badge-clone';
+        badge.innerText = 'Voice Cloning (Reference Match)';
+        cloneCard.style.display = 'block';
+        if (ttsCard) ttsCard.style.display = 'block';
+        loadVoiceCloningStatus();
+      }
+    }
+
+    function setTtsText(txt) {
+      const input = document.getElementById('ttsTextInput');
+      input.value = txt;
+      updateTtsCharCount();
+      input.focus();
+    }
+
+    function updateTtsCharCount() {
+      const len = document.getElementById('ttsTextInput').value.length;
+      document.getElementById('ttsCharCount').innerText = `${len} chars`;
+    }
+
+    function onTtsPitchSlider(v) {
+      const val = parseInt(v);
+      const span = document.getElementById('ttsPitchVal');
+      if (val === 0) {
+        span.innerText = 'Exact Match (207 Hz)';
+      } else if (val > 0) {
+        span.innerText = `+${val} Hz (${207 + val} Hz)`;
+      } else {
+        span.innerText = `${val} Hz (${207 + val} Hz)`;
+      }
+    }
+
+    async function speakClonedText() {
+      const text = document.getElementById('ttsTextInput').value.trim();
+      if (!text) {
+        showBanner("Please enter or select some text first!", "error");
+        return;
+      }
+      const voiceName = document.getElementById('ttsVoiceSelect').value;
+      const pitchOffset = parseInt(document.getElementById('ttsPitchSlider').value || '0');
+      const ratePercent = parseInt(document.getElementById('ttsRateSelect').value || '-3');
+      const playAudio = document.getElementById('ttsPlayAudioCheck').checked;
+      const btn = document.getElementById('btnTtsSpeak');
+      const downloadBtn = document.getElementById('btnTtsDownload');
+      const player = document.getElementById('ttsAudioPlayer');
+      const resultContainer = document.getElementById('ttsResultContainer');
+
+      btn.disabled = true;
+      btn.innerHTML = `<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4 31.4"/></svg> Synthesizing Voice...`;
+      showBanner("⏳ Generating realistic cloned speech (calibrated to target female reference)...", "info");
+
+      try {
+        const res = await fetch('/voice-cloning/tts', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            text: text,
+            voice_name: voiceName,
+            pitch_offset_hz: pitchOffset,
+            rate_percent: ratePercent,
+            play_audio: playAudio,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          showBanner(`✨ Cloned speech generated! Duration: ${data.duration_sec}s | RMS: ${data.output_rms}`, "info");
+          resultContainer.style.display = 'block';
+          document.getElementById('ttsDurationInfo').innerText = `${data.duration_sec}s • 16 kHz • ${Math.round(data.target_median_f0)} Hz target F0`;
+          
+          const audioUrl = `/voice-cloning/tts/audio?t=${Date.now()}`;
+          player.src = audioUrl;
+          downloadBtn.href = audioUrl;
+          downloadBtn.style.display = 'inline-flex';
+          
+          // Browser audio preview
+          player.play().catch(() => {});
+        } else {
+          showBanner("TTS Error: " + (data.detail || "Failed to generate speech"), "error");
+        }
+      } catch (err) {
+        showBanner("TTS Network error: " + err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg> ⚡ Speak in Cloned Voice`;
+      }
     }
 
     async function setMode(mode) {
       activeMode = mode;
       updateModeTabs();
       await applySettings();
+    }
+
+    async function loadVoiceCloningStatus() {
+      try {
+        const res = await fetch('/voice-cloning/status');
+        const data = await res.json();
+        const badge = document.getElementById('cloneStatusBadge');
+        if (data.status === 'ready') {
+          badge.className = 'mode-badge badge-ready';
+          badge.innerText = 'Reference Ready';
+          if (data.profile) {
+            document.getElementById('cloneClipsCount').innerText = `${data.profile.total_clips} audio messages (WhatsApp Opus/Ogg)`;
+            document.getElementById('cloneTargetF0').innerText = `${data.profile.f0_median.toFixed(0)} Hz (Indian Female)`;
+            document.getElementById('cloneDuration').innerText = `${data.profile.total_duration_sec.toFixed(1)}s clean speech`;
+          }
+        } else if (data.status === 'needs_preparation') {
+          badge.className = 'mode-badge badge-warn';
+          badge.innerText = 'Needs Preparation';
+        } else if (data.status === 'not_found') {
+          badge.className = 'mode-badge badge-error';
+          badge.innerText = 'Files Not Found';
+        } else {
+          badge.className = 'mode-badge badge-error';
+          badge.innerText = 'Error';
+        }
+        document.getElementById('cloneRefFolder').innerText = data.reference_dir + '/';
+      } catch (e) {
+        console.error('Failed to load voice cloning status', e);
+      }
+    }
+
+    async function prepareVoiceReference() {
+      const btn = document.getElementById('btnPrepareRef');
+      btn.disabled = true;
+      btn.innerText = '⏳ Processing Voice Clips...';
+      showBanner('Scanning voice-clone recordings, trimming silence, analyzing pitch and extracting target speaker profile...', 'info');
+      try {
+        const res = await fetch('/voice-cloning/prepare-reference', {method: 'POST'});
+        const data = await res.json();
+        if (res.ok) {
+          showBanner(`✅ ${data.message}! Target F0: ${data.profile.f0_median.toFixed(0)} Hz`, 'info');
+          await loadVoiceCloningStatus();
+          await loadModels();
+          setTimeout(() => showBanner('', 'none'), 4000);
+        } else {
+          showBanner('Preparation failed: ' + (data.detail || 'Unknown error'), 'error');
+        }
+      } catch (e) {
+        showBanner('Error preparing reference: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '⚡ Prepare Voice Reference';
+      }
+    }
+
+    function onClonePitchSlider(v) {
+      document.getElementById('clonePitchVal').innerText = parseFloat(v).toFixed(2) + 'x';
+      debounceApplySettings();
+    }
+
+    function onCloneTimbreSlider(v) {
+      document.getElementById('cloneTimbreVal').innerText = Math.round(parseFloat(v) * 100) + '%';
+      debounceApplySettings();
     }
 
     function onPitchSlider(v) {
@@ -787,6 +1194,8 @@
         }
         document.getElementById('pitchVal').innerText = parseFloat(document.getElementById('pitchSlider').value).toFixed(2) + 'x';
         document.getElementById('formantVal').innerText = parseFloat(document.getElementById('formantSlider').value).toFixed(2) + 'x';
+      } else if (modelType === 'voice_cloning') {
+        setMode('voice_cloning');
       }
       applySettings();
     }
@@ -809,6 +1218,8 @@
         dsp_formant_shift: parseFloat(document.getElementById('formantSlider').value),
         dsp_output_gain: parseFloat(document.getElementById('gainSlider').value),
         dsp_dry_wet_mix: parseFloat(document.getElementById('mixSlider').value),
+        voice_clone_pitch_scale: parseFloat(document.getElementById('clonePitchSlider').value),
+        voice_clone_timbre_mix: parseFloat(document.getElementById('cloneTimbreSlider').value),
       };
 
       try {
@@ -886,6 +1297,16 @@
         document.getElementById('statUnder').innerText = data.underrun_count;
         document.getElementById('statOver').innerText = data.overflow_count;
 
+        // CPU Overload status
+        const overloadEl = document.getElementById('statOverload');
+        if (data.overload) {
+          overloadEl.style.color = 'var(--danger)';
+          overloadEl.innerText = `${data.overload_count} (High CPU Load)`;
+        } else {
+          overloadEl.style.color = '#10b981';
+          overloadEl.innerText = `${data.overload_count} (Normal)`;
+        }
+
         // Color code RTF
         const rtfEl = document.getElementById('statRtf');
         if (data.real_time_factor > 1.0) {
@@ -928,6 +1349,7 @@
     window.onload = async () => {
       await loadModels();
       await loadDevices();
+      await loadVoiceCloningStatus();
       pollInterval = setInterval(pollTelemetry, 300);
     };
   </script>

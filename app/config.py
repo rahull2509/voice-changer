@@ -48,13 +48,26 @@ class RVCConfig:
 
 
 @dataclass
+class VoiceCloningConfig:
+    """Voice Cloning reference-conditioned mode configuration."""
+
+    reference_dir: str = "voice-clone"
+    cache_dir: str = "cache/voice_clone"
+    model_path: Optional[str] = None
+    target_pitch_scale: float = 1.0       # Pitch adjustment factor relative to reference (0.8–1.3)
+    timbre_mix: float = 1.0               # 0.0–1.0 reference timbre strength
+    f0_method: str = "world"              # "world"
+
+
+@dataclass
 class AppConfig:
     """Top-level application configuration."""
 
     audio: AudioConfig = field(default_factory=AudioConfig)
     dsp: DSPConfig = field(default_factory=DSPConfig)
     rvc: RVCConfig = field(default_factory=RVCConfig)
-    mode: str = "dsp"                     # "dsp" or "rvc"
+    voice_cloning: VoiceCloningConfig = field(default_factory=VoiceCloningConfig)
+    mode: str = "dsp"                     # "dsp", "rvc", or "voice_cloning"
     host: str = "127.0.0.1"
     port: int = 8000
     log_level: str = "info"
@@ -71,6 +84,8 @@ class AppConfig:
                              if k in DSPConfig.__dataclass_fields__}),
             rvc=RVCConfig(**{k: v for k, v in d.get("rvc", {}).items()
                              if k in RVCConfig.__dataclass_fields__}),
+            voice_cloning=VoiceCloningConfig(**{k: v for k, v in d.get("voice_cloning", {}).items()
+                                               if k in VoiceCloningConfig.__dataclass_fields__}),
             mode=d.get("mode", "dsp"),
             host=d.get("host", "127.0.0.1"),
             port=d.get("port", 8000),
@@ -133,5 +148,12 @@ class AppConfig:
             cfg.rvc.hubert_path = v
         if v := os.getenv("RVC_PITCH_SHIFT_SEMITONES"):
             cfg.rvc.pitch_shift_semitones = int(v)
+
+        if v := os.getenv("VOICE_CLONE_REF_DIR"):
+            cfg.voice_cloning.reference_dir = v
+        if v := os.getenv("VOICE_CLONE_PITCH_SCALE"):
+            cfg.voice_cloning.target_pitch_scale = float(v)
+        if v := os.getenv("VOICE_CLONE_TIMBRE_MIX"):
+            cfg.voice_cloning.timbre_mix = float(v)
 
         return cfg

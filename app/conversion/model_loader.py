@@ -102,6 +102,27 @@ def get_available_models(models_dir: str = "models") -> List[ModelInfo]:
                 )
             )
 
+    # 3. Check for prepared Voice Cloning target profile
+    try:
+        from app.conversion.voice_reference import VoiceReferenceManager
+        mgr = VoiceReferenceManager()
+        readiness, _ = mgr.get_readiness()
+        if readiness == "ready":
+            prof = mgr.load_cached_profile()
+            results.append(
+                ModelInfo(
+                    id="voice_clone_target",
+                    name=f"Cloned Female Voice ({prof.f0_median:.0f} Hz Target)",
+                    model_type="voice_cloning",
+                    sample_rate=prof.sample_rate,
+                    size_mb=round(prof.total_duration_sec * 0.03, 1),
+                    description=f"Neural reference match conditioned on {prof.total_clips} voice messages ({prof.total_duration_sec:.1f}s, target F0 median {prof.f0_median:.0f} Hz).",
+                    is_ready=True,
+                )
+            )
+    except Exception as e:
+        logger.debug("Voice cloning profile check in model loader: %s", e)
+
     return results
 
 

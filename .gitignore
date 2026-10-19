@@ -58,6 +58,8 @@ htmlcov/
 *.aac
 recordings/
 scratch_*
+cache/
+voice-clone/
 
 # AI Models, checkpoints & embeddings (Keep README)
 *.pth

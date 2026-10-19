@@ -14,6 +14,7 @@ from app.config import AppConfig
 from app.conversion.base import BaseConverter
 from app.conversion.dsp_converter import DSPConverter
 from app.conversion.rvc_converter import RVCConverter
+from app.conversion.voice_cloning_converter import VoiceCloningConverter
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,8 @@ class PipelineStatus:
     overflow_count: int = 0
     underrun_count: int = 0
     chunks_processed: int = 0
+    overload: bool = False
+    overload_count: int = 0
     last_error: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -58,6 +61,8 @@ class PipelineStatus:
             "overflow_count": self.overflow_count,
             "underrun_count": self.underrun_count,
             "chunks_processed": self.chunks_processed,
+            "overload": self.overload,
+            "overload_count": self.overload_count,
             "last_error": self.last_error,
         }
 
@@ -107,6 +112,11 @@ class AudioPipeline:
         elif self.config.mode == "rvc":
             return RVCConverter(
                 config=self.config.rvc,
+                sample_rate=self.config.audio.internal_sample_rate,
+            )
+        elif self.config.mode == "voice_cloning":
+            return VoiceCloningConverter(
+                config=self.config.voice_cloning,
                 sample_rate=self.config.audio.internal_sample_rate,
             )
         else:
@@ -318,6 +328,11 @@ class AudioPipeline:
                 self.status.total_latency_ms = tot_latency
                 self.status.real_time_factor = rtf
                 self.status.chunks_processed += 1
+                if rtf > 1.0:
+                    self.status.overload = True
+                    self.status.overload_count += 1
+                else:
+                    self.status.overload = False
                 if self.capture:
                     self.status.overflow_count = self.capture.overflow_count
                 if self.playback:
